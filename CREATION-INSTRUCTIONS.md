@@ -24,21 +24,48 @@ This guide walks you through creating a complete Fabric escape room game using G
 
 ## Step 1: Set Up Your Environment
 
-1. Open **VS Code**.
-2. Clone this repo:
-   - Press **Ctrl+Shift+P** to open the Command Palette
-   - Type **Git: Clone** and select it
-   - Paste the repo URL and choose a local folder
-   - When prompted, click **Open** to open the cloned folder in VS Code
-3. Install the **Fabric Skills** so Copilot can create Fabric items:
-   - Open **GitHub Copilot Chat** (Ctrl+Shift+I)
-   - Switch to **Agent** mode (click the mode dropdown at the top of the chat panel)
-   - Ask Copilot to install the skills by typing:
-     ```
-     Install the Fabric skills from https://github.com/microsoft/skills-for-fabric
-     ```
-   - Follow any prompts to confirm the installation
-4. The `AGENTS.md` file in this folder is the game blueprint — it tells Copilot how to structure escape room games. As long as you have this folder open in VS Code, Copilot will automatically use it as context.
+> ⚠️ **Important:** This repo and [microsoft/skills-for-fabric](https://github.com/microsoft/skills-for-fabric) do **not** auto-combine. Copilot only sees a repo's `AGENTS.md` when that repo is open in VS Code. To build the game you need **both** repos open in the same VS Code window.
+
+### 1. Clone both repos as siblings
+
+Pick a parent folder (e.g. `C:\Repos\` or `~/repos`). You will end up with this layout:
+
+```
+repos/
+├── fabric-escape-room/      ← this repo (the game blueprint)
+└── skills-for-fabric/       ← Microsoft Fabric authoring skills
+```
+
+In **VS Code**:
+
+1. Open the **Source Control** view (the branch icon in the left activity bar, or **View → Source Control** in the menu bar).
+2. Click **Clone Repository**.
+3. Paste `https://github.com/ineslantero/fabric-escape-room` into the URL field at the top and press Enter.
+4. In the folder picker, choose your parent folder (e.g. `C:\Repos`) and click **Select as Repository Destination**.
+5. When the popup asks "Would you like to open the cloned repository?", click **Cancel** — you'll open both together in the next step.
+6. Repeat steps 1–4 for the Fabric skills:
+   - Click **Source Control → Clone Repository** again
+   - Paste `https://github.com/microsoft/skills-for-fabric`
+   - Select the **same** parent folder you used for the first clone
+7. Again, click **Cancel** when asked to open the repository.
+
+> **Already cloned `skills-for-fabric`?** Skip step 6. Instead, open your existing copy in VS Code, click the **Synchronize Changes** button at the bottom-left status bar (the circular arrows next to the branch name) to pull the latest skills, then continue.
+
+### 2. Open both repos in a multi-root workspace
+
+So Copilot picks up the game blueprint **and** the Fabric skills at the same time:
+
+1. In VS Code, click **File → Open Folder…** in the top menu bar, then select your `fabric-escape-room` folder and click **Select Folder**.
+2. Click **File → Add Folder to Workspace…**, then select your `skills-for-fabric` folder and click **Add**.
+3. Click **File → Save Workspace As…**, name it (e.g. `escape-room.code-workspace`) and save it anywhere you like. Open this file next time you want to come back.
+
+Both `AGENTS.md` files (the game blueprint here, and the Fabric authoring skills there) are now in Copilot's context whenever you chat in this workspace.
+
+### 3. Open Copilot Chat in Agent mode
+
+- In the top-right of the VS Code window, click the **Copilot** icon (or click **View → Chat** in the menu bar) to open the Copilot Chat panel.
+- At the top of the chat panel, click the **mode dropdown** (it usually says "Ask" by default) and select **Agent**.
+- If Copilot offers to "check for skills-for-fabric updates" at session start, click **Cancel** / decline — you don't need it for this exercise.
 
 ---
 
@@ -71,33 +98,36 @@ MODULE IDEAS (optional — or let Copilot generate them):
 3. [MODULE 3 — the AI conversation puzzle, e.g., "decode intercepted signal fragments"]
 4. [MODULE 4 — the notebook discovery puzzle, e.g., "engine diagnostic terminal"]
 
-Build the complete game following the escape room framework:
-- Create a Warehouse with all puzzle data and 4 AuthModule tables (10 codes each, 1 correct + 9 decoys)
-- Create an Eventhouse with time-series data for the pattern gap puzzle (~150-200 activity rows across 50+ time windows with one gap, and ~50 assessment windows with decoy codes)
-- Create a Semantic Model (DirectLake TMDL) with explicit average measures and a victory/denied DAX measure
-- Create a Notebook with themed diagnostic output (4-6 sections, one showing the code)
-- Create a Data Agent with the AI character personality
-- Create an OrgApp as the game portal
+Build the complete game following the escape room framework. Use these Fabric skills for each item:
 
-After creating everything, generate:
-1. A SETUP GUIDE with: theme JSON (with Notepad save instructions), detailed report visual specs (Get Data flow, theme import, slicer styles, drillthrough setup), RTI Dashboard KQL queries, Data Agent configuration (data sources + AI instructions), OrgApp configuration
-2. A PLAY GUIDE for players (no spoilers, just hints and code formats)
-3. An ANSWER KEY with all 4 codes and how to find them
+- **Warehouse** (use the `sqldw-authoring-cli` skill) — puzzle data plus 4 AuthModule tables (10 codes each, 1 correct + 9 decoys)
+- **Eventhouse + KQL Database** (use the `eventhouse-authoring-cli` skill) — time-series data for the pattern gap puzzle (~150–200 activity rows across 50+ time windows with one gap, and ~50 assessment windows with decoy codes)
+- **Lakehouse + Notebook** (use the `spark-authoring-cli` skill) — Lakehouse as storage layer for the semantic model, plus a notebook with themed diagnostic output (4–6 sections, one showing the code)
+- **Semantic Model** (use the `semantic-model-authoring` skill) — DirectLake TMDL with explicit average measures and a victory/denied DAX measure
+
+Do **NOT** create the Data Agent, OrgApp, Power BI reports, or RTI Dashboard via Copilot — those are configured manually in the Fabric portal using the Setup Guide you generate.
+
+After creating the items above, generate documentation **split into multiple files** so different team members can work in parallel:
+1. A **`setup-guide/`** folder with one markdown file per workstream — index `README.md` (role assignments + dependency order), `00-SHARED-SETUP.md` (sign-in + theme JSON), `01-MODULE1-REPORT.md`, `02-MODULE2-DASHBOARD.md`, `03-MODULE3-DATA-AGENT.md`, `04-MODULE5-REPORT.md`, `05-ORGAPP.md`
+2. A top-level **`PLAY-GUIDE.md`** for players (no spoilers, just hints and code formats)
+3. A top-level **`ANSWER-KEY.md`** with all 4 codes and how to find them
 ```
 
 ---
 
 ## Step 3: Follow the Setup Guide
 
-After Copilot creates the Fabric items, it generates a **Setup Guide** with detailed instructions for the remaining manual configuration:
+After Copilot creates the Fabric items, it generates a **`setup-guide/` folder** with one markdown file per workstream, plus a top-level `PLAY-GUIDE.md` and `ANSWER-KEY.md`. Different team members can pick up different files in parallel.
 
-1. **Save the report theme** — Open Notepad, paste the JSON, save as `.json`
-2. **Build Module 1 report** — Connect to semantic model via Get Data → Power BI semantic models, apply theme, add visuals with specific slicer/gauge/drillthrough settings
-3. **Build Module 2 RTI Dashboard** — Create tiles with the provided KQL queries
-4. **Configure the Data Agent** — Add data sources (Warehouse + KQL Database), paste AI instructions
-5. **Build Module 5 report** — Final escape with 4 code slicers and status card
-6. **Set up the OrgApp** — Configure the game portal with all modules
-7. **Test end-to-end** — Verify all 4 codes and the victory condition
+Open `setup-guide/README.md` first — it lists owner roles, dependency order, and a suggested team split. Typical 3-person split:
+
+- **Power BI builder** — `01-MODULE1-REPORT.md`, `02-MODULE2-DASHBOARD.md`, `04-MODULE5-REPORT.md`
+- **Data Agent owner** — `03-MODULE3-DATA-AGENT.md` (independent — can run in parallel)
+- **OrgApp owner** — `05-ORGAPP.md` (waits for the others to publish their items)
+
+Everyone reads `00-SHARED-SETUP.md` first (sign-in to Power BI Desktop and Fabric, save the theme JSON).
+
+Once all five files are done, end-to-end test the OrgApp link as a player would: enter the four codes in Module 5 and confirm the victory message.
 
 ---
 

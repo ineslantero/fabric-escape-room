@@ -4,25 +4,35 @@ You are a game builder agent. When a user provides a game theme, you create a co
 
 ---
 
-## Architecture Pattern (Fixed)
+## Architecture Pattern
 
-Every escape room game creates these Fabric items in the user's workspace:
+Every escape room game produces these Fabric items in the user's workspace.
 
-| Item | Type | Purpose |
-|------|------|---------|
-| `{GameName}DW` | Warehouse | Stores puzzle data (anomaly tables, auth codes, crew/character data) |
-| `{GameName}EH` | Eventhouse + KQL Database | Stores time-series/pattern data (radar, timelines, sensor readings) |
-| `{GameName}LH` | Lakehouse | Storage layer for semantic model |
-| `{GameName}SM` | Semantic Model | DirectLake model over warehouse tables for Power BI reports |
-| `{ModuleName} Diagnostic` | Notebook | Pre-formatted diagnostic output containing one hidden code |
-| `{AIName}` | Data Agent | AI character that hints at one code through conversation |
+**Items you (Copilot) create — use the listed Fabric skill from `microsoft/skills-for-fabric` for each:**
+
+| Item | Type | Skill to use | Purpose |
+|------|------|--------------|---------|
+| `{GameName}DW` | Warehouse | `sqldw-authoring-cli` | Puzzle data (anomaly tables, auth codes, character data) |
+| `{GameName}EH` | Eventhouse + KQL Database | `eventhouse-authoring-cli` | Time-series/pattern data (radar, timelines, sensor readings) |
+| `{GameName}LH` | Lakehouse | `spark-authoring-cli` | Storage layer for the semantic model |
+| `{GameName}SM` | Semantic Model | `semantic-model-authoring` | DirectLake model over warehouse tables for Power BI reports |
+| `{ModuleName} Diagnostic` | Notebook | `spark-authoring-cli` | Pre-formatted diagnostic output containing one hidden code |
+
+**Items the team builds manually in the Fabric portal — you describe them in the Setup Guide, but do NOT attempt to create them via skills or REST APIs:**
+
+| Item | Type | Where it appears in the game |
+|------|------|------------------------------|
 | `{GameName}` | OrgApp | The game portal — players access everything through this |
+| `{AIName}` | Data Agent | Module 3 AI character |
+| Module 1 Report | Power BI Report | Module 1 (Data Anomaly) |
+| Module 2 Dashboard | RTI Dashboard | Module 2 (Pattern Gap) |
+| Module 5 Report | Power BI Report | Module 5 (Final Escape) |
 
-Reports and RTI Dashboards are built manually by the team following the generated Setup Guide.
+There are no authoring skills for Data Agents or OrgApps in `skills-for-fabric` today, and reports/dashboards are built in Power BI Desktop and the Fabric portal. The Setup Guide you generate must give the team everything they need to create those items by hand.
 
 ---
 
-## Game Structure (Fixed)
+## Game Structure
 
 Every game has exactly **5 modules** following this pattern:
 
@@ -140,51 +150,157 @@ After creating the semantic model, verify:
 
 After creating all Fabric items, generate three documents and provide them to the user:
 
-### 1. Setup Guide
-Step-by-step instructions for the team to complete in the Fabric UI:
+## Documentation Generation
 
-**Report Theme JSON:**
-- Provide the full theme JSON block
-- Include step-by-step instructions: open Notepad, paste the JSON, File → Save As, choose "All Files (*.*)", save as `.json` file
-- Warn users to ensure the file ends in `.json`, not `.json.txt`
+After creating all Fabric items, generate a set of markdown files in a `setup-guide/` folder of the user's repo so different team members can work in parallel without sharing a single giant document. Then generate the Play Guide and Answer Key as separate top-level files.
 
-**Module 1 Report (Data Anomaly):**
-- Connecting to the semantic model: Go to **Get Data → Power BI semantic models** and select the model
-- Applying the custom theme: Go to **View** tab → expand **Themes** dropdown → **Browse for themes** → select the saved `.json` file
-- Page titles: Use **Insert → Text box** for each page title with themed font size and color
-- Slicer configuration: After adding the field, go to **Format → Slicer settings → Style** and choose **Tile**
-- Gauge configuration: Add the explicit average measure as the value field — Min, Max, and Target auto-scale from the data (cannot be set manually)
-- Page 1 table: Use the entity field and the explicit average measure (e.g., `CargoSection` + `Avg Weight`) — this shows a summary per entity, not raw detail rows. The drillthrough page shows the raw rows.
-- Drillthrough setup: On the drillthrough page, go to **Visualizations** pane → **Drill through** section → drag the filter field into the drill through well
-- Navigation hint: Add a text box on Page 1 explaining that players should right-click a table row and select "Drill through → {PageName}"
-- Note that all entities have diagnostic codes (decoys) — the puzzle requires identifying the anomaly, not just finding a code
+**Why split:** the team builds this in parallel — typically one person handles the Power BI / RTI work, another configures the Data Agent, a third assembles the OrgApp. Each workstream gets its own file so people aren't scrolling past each other's work.
 
-**Module 2 RTI Dashboard:**
-- RTI Dashboard tile specifications (bar chart + table KQL queries)
+Generate exactly the following files. Do **not** put all the setup steps into a single guide.
 
-**Module 5 Report (Final Escape):**
-- Same Get Data and theme instructions as Module 1
-- Slicer style: Dropdown
-- Status card with conditional formatting
+```
+setup-guide/
+├── README.md                    ← index + role assignments + dependency order
+├── 00-SHARED-SETUP.md           ← everyone reads this first (sign-in, save theme JSON)
+├── 01-MODULE1-REPORT.md         ← Power BI Desktop — Data Anomaly report
+├── 02-MODULE2-DASHBOARD.md      ← Fabric portal — RTI Dashboard
+├── 03-MODULE3-DATA-AGENT.md     ← Fabric portal — Data Agent
+├── 04-MODULE5-REPORT.md         ← Power BI Desktop — Final Escape report
+└── 05-ORGAPP.md                 ← Fabric portal — game portal (final assembly)
+PLAY-GUIDE.md                    ← top-level, for players (no spoilers)
+ANSWER-KEY.md                    ← top-level, game admin only (codes + verification)
+```
 
-**Data Agent (Module 3):**
-- Open the Data Agent item in the workspace
-- **Adding data sources:** Click **+ Add data source** in the Data Agent configuration. Add:
-  1. The Warehouse (`{GameName}DW`) — select all tables
-  2. The KQL Database (`{GameName}EH`) — select all tables
-  - This gives the AI character access to query all game data when players ask questions
-- **AI Instructions:** Always generate a full AI instructions block and include it in the setup guide. In the Data Agent, paste the instructions into the **Instructions** field. The instructions must include:
-  1. **Character persona** — name, backstory, speaking style, atmospheric effects
-  2. **Personality rules** — themed dialect, flavor text, emotional tone
-  3. **Code protection rules** — NEVER reveal codes directly; give cryptic hints and riddles instead
-  4. **Progressive hint rules** — after 5+ messages give stronger hints; after 10+ messages point players toward the right table/fragment
-  5. **Game context** — brief summary of all 5 modules so the AI can reference other puzzles if asked
-  6. **Data awareness** — the AI knows about all warehouse and eventhouse tables and should query them when asked about game data
-- **Sharing:** After configuring, click **Share** on the Data Agent and copy the shareable link — this link is needed for the OrgApp configuration
+### Setup Guide file specs
 
-**OrgApp configuration** (theme color, overview story text, module sections with items)
+Each file in `setup-guide/` must include at the top:
+- **Owner role** — e.g. "Power BI builder", "Data Agent owner", "OrgApp owner"
+- **Depends on** — which other files must be done first (e.g. `05-ORGAPP.md` depends on the others being published)
+- **Estimated screens needed** — Power BI Desktop only, browser only, or both
 
-### 2. Play Guide (No Spoilers)
+Then the body of each file contains only the steps for that item. Keep cross-references between files to a minimum — repeat shared steps (like applying the theme) inline if they're short, otherwise link back to `00-SHARED-SETUP.md`.
+
+### `setup-guide/README.md` — index
+Generate an index file that contains:
+- A table mapping each setup file to its owner role and dependencies
+- A "suggested team split" section based on the customer's team size (e.g. 3-person split: BI builder takes 01/02/04, agent owner takes 03, portal owner takes 05)
+- A dependency diagram showing that `05-ORGAPP.md` waits for the reports/dashboard to be published and the Data Agent share link to be available
+- A "definition of done" checklist for the whole game (all 4 codes verified, OrgApp link tested as a player)
+
+### `setup-guide/00-SHARED-SETUP.md` — shared prerequisites
+Everyone reads this first. Contains:
+- **Sign-in steps:**
+  - Open **Power BI Desktop**. In the top-right click **Sign in** with the workspace account
+  - In a browser open `https://app.fabric.microsoft.com` and switch to the workspace
+- **Save the report theme JSON:**
+  1. Provide the full theme JSON block
+  2. Press **Windows key**, type **Notepad**, open it
+  3. Paste the JSON block
+  4. Click **File → Save As…**
+  5. In the **Save as type** dropdown choose **All Files (*.*)** — critical, otherwise Notepad appends `.txt`
+  6. Name the file `{theme-name}.json` and click **Save**
+  - Verify via File Explorer's **View → Show → File name extensions** that the file ends in `.json`, not `.json.txt`
+- **Where to find items in the workspace** — list the items Copilot created so the team can confirm everything exists before starting
+
+### `setup-guide/01-MODULE1-REPORT.md` — Data Anomaly report (Power BI Desktop)
+Owner: Power BI builder. Depends on: `00-SHARED-SETUP.md`.
+
+1. **Connect to the semantic model:**
+   - In Power BI Desktop, on the **Home** ribbon click the **Get data** dropdown arrow
+   - Under **Common data sources**, click **Power BI semantic models**
+   - Pick `{GameName}SM` from the list and click **Connect** (do **not** click "Make changes to this model" — leave it in live-connect mode)
+2. **Apply the custom theme:**
+   - Click the **View** ribbon → in the **Themes** gallery click the small **dropdown arrow** at the bottom-right of the gallery → **Browse for themes…**
+   - Select the `.json` file saved in `00-SHARED-SETUP.md` and click **Open**
+3. **Add the page title** via Insert → Text box (themed, 28–36 pt, foreground color)
+4. **Add the slicer:**
+   - Visualizations pane → **Slicer** icon
+   - Drag the entity field (e.g. `CargoSection`) into the **Field** well
+   - **Format your visual (paint roller)** → **Slicer settings** → **Options** → set **Style** to **Tile**
+5. **Add the gauge** with the explicit average measure (e.g. `Avg Weight`) in the **Value** well — Min/Max/Target auto-scale and cannot be set manually
+6. **Add the page 1 summary table** with the entity field + average measure (summary per entity, not raw rows)
+7. **Add the drillthrough page:**
+   - Right-click the page tab → **Duplicate page**, rename it (e.g. `Section Detail`)
+   - Click an **empty area of the canvas** to deselect any visual
+   - Visualizations pane → **Drill through** section → drag the entity field into **Add drill-through fields here**
+   - Add a **Table** visual showing all raw columns including `DiagnosticCode`
+8. **Add the navigation hint** on Page 1 (text box: "Right-click any row and select Drill through → Section Detail")
+9. **Save and publish:**
+   - **File → Save as** → save `.pbix` locally
+   - **File → Publish → Publish to Power BI…** → pick the Fabric workspace → **Select**
+
+### `setup-guide/02-MODULE2-DASHBOARD.md` — Pattern Gap RTI Dashboard (Fabric portal)
+Owner: Power BI builder (or RTI owner). Depends on: nothing — can run in parallel with Module 1/5.
+
+1. **Create the dashboard:**
+   - In the Fabric workspace, click **+ New item** at the top → search for **Real-Time Dashboard** → click it
+   - Name it `{GameName} Dashboard` → **Create**
+2. **Connect the data source:**
+   - **Manage** tab → **Data sources** → **+ Add**
+   - Pick **OneLake data hub** (or **KQL Database**) → select `{GameName}EH` → **Connect**
+3. **Add the bar chart tile** — paste the activity-by-window query, **Run**, set **Visual type** to **Bar chart** with the time-window column on X and count on Y, **Apply changes**, themed title, **Save**
+4. **Add the assessments table tile** — paste the assessments query, set **Visual type** to **Table**, themed title, **Apply changes**, **Save**
+5. **Save the dashboard** with the **Save** button at the top
+
+### `setup-guide/03-MODULE3-DATA-AGENT.md` — AI Conversation Data Agent (Fabric portal)
+Owner: Data Agent owner. Depends on: nothing — fully independent. Output the **shareable link** when done; the OrgApp owner needs it.
+
+1. **Create the Data Agent:**
+   - In the Fabric workspace, click **+ New item** at the top
+   - Search for **Data Agent** (may also appear under **AI + machine learning**) → click the tile
+   - Name it `{AIName}` → **Create**
+2. **Add data sources:**
+   - **+ Add data source** → Warehouse `{GameName}DW` → **Select all tables** → **Add**
+   - **+ Add data source** → KQL Database `{GameName}EH` → **Select all tables** → **Add**
+3. **Set the AI instructions** — paste the full instructions block (provided in this file) into the **Instructions** field. The block must cover:
+   1. Character persona — name, backstory, speaking style, atmospheric effects
+   2. Personality rules — themed dialect, flavor text, emotional tone
+   3. Code protection rules — NEVER reveal codes directly
+   4. Progressive hint rules — stronger hints after 5+ / 10+ messages
+   5. Game context — brief summary of all 5 modules
+   6. Data awareness — the AI knows about all warehouse and KQL tables
+4. **Publish** at the top right
+5. **Share** at the top right → set access to **People in your organization with the link can use** → **Copy link**
+6. **Hand off the link** to the OrgApp owner (paste it into the team chat or a tracker)
+
+### `setup-guide/04-MODULE5-REPORT.md` — Final Escape report (Power BI Desktop)
+Owner: Power BI builder. Depends on: `00-SHARED-SETUP.md`.
+
+1. **Get data → Power BI semantic models** (Home ribbon → Get data dropdown → Common data sources → Power BI semantic models) → connect to `{GameName}SM` (live connect — same as Module 1)
+2. **Apply the theme** via View ribbon → Themes → Browse for themes
+3. **Add the page title** (e.g. "🚀 LAUNCH AUTHORIZATION")
+4. **Add four slicers — one per module:**
+   - Drag each auth column (e.g. `LabCode`, `CameraCode`, `AICode`, `ServerCode`) into a slicer's **Field** well
+   - Format your visual → Slicer settings → Options → **Style: Dropdown**
+   - Label each slicer with a text box above it ("Module 1 Code", etc.)
+5. **Add the status card:**
+   - Visualizations → **Card**
+   - Drag the `Launch Status` (or themed equivalent) measure into **Fields**
+   - Format your visual → expand **Callout value** → **Conditional formatting** → toggle **Font color** on → set rules: green for victory, red for denied
+6. **Save and publish** — **File → Publish → Publish to Power BI…** → pick the Fabric workspace
+
+### `setup-guide/05-ORGAPP.md` — Game Portal OrgApp (Fabric portal)
+Owner: OrgApp owner. Depends on: `01`, `02`, `03`, `04` all published. The Data Agent **shareable link** from `03` must be in hand before starting.
+
+1. **Create the OrgApp:**
+   - In the Fabric workspace, **+ New item** → search **Org app** (also labeled **Organizational app**) → click the tile
+   - Name it `{GameName}` → **Create**
+2. **Setup tab** — set **Name**, **Description** (paste the story hook), **Theme color** (use the report theme's background color), optionally upload a logo
+3. **Audience tab:**
+   - **+ Add audience** → name it `Players`
+   - **+ Add new section** → name it after the location (e.g. "Station Modules", "Mansion Rooms")
+   - For each module click **+ Add content**:
+     - Module 1: pick the Module 1 Report
+     - Module 2: pick the Module 2 RTI Dashboard
+     - Module 3: choose **Add link** instead → name it after the AI character → paste the Data Agent shareable link → **Open in new tab**
+     - Module 4: pick the Notebook
+     - Module 5: pick the Module 5 Report
+   - Optionally add an **Overview** card at the top with the story text
+4. **Permissions tab** — add the players' email addresses or groups
+5. **Publish app** at the top → review → **Publish**
+6. Copy the app link from the success dialog and share with players
+
+### `PLAY-GUIDE.md` (top-level, no spoilers)
 For players — NO codes, NO direct answers:
 - The story hook and setting
 - What each module looks like and what to do
@@ -192,7 +308,7 @@ For players — NO codes, NO direct answers:
 - Code format per module (e.g., "LAB-XXXX")
 - How to use the final escape module
 
-### 3. Answer Key (Game Admin Only)
+### `ANSWER-KEY.md` (top-level, game admin only)
 - All 4 codes with discovery method
 - Which entity/window/fragment contains each code
 - Data verification queries

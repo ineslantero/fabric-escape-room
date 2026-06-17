@@ -80,11 +80,11 @@ See [CREATION-INSTRUCTIONS.md](CREATION-INSTRUCTIONS.md) for the full step-by-st
 
 **Quick start:**
 
-1. Clone this repo and open it in VS Code
-2. Install [Fabric Skills for Copilot](https://github.com/microsoft/skills-for-fabric)
-3. Customize the prompt in [CREATION-INSTRUCTIONS.md](CREATION-INSTRUCTIONS.md) with your theme
-4. Paste it into GitHub Copilot Agent mode
-5. Follow the generated Setup Guide to finish the game
+1. Clone **both** [this repo](https://github.com/ineslantero/fabric-escape-room) and [microsoft/skills-for-fabric](https://github.com/microsoft/skills-for-fabric) as sibling folders. They don't auto-combine — Copilot only sees a repo's `AGENTS.md` when that repo is open in VS Code.
+2. Open both folders in a VS Code multi-root workspace (File → Open Folder, then File → Add Folder to Workspace).
+3. Open Copilot Chat in **Agent mode**.
+4. Customize the prompt in [CREATION-INSTRUCTIONS.md](CREATION-INSTRUCTIONS.md) with your theme and paste it into the chat.
+5. Follow the generated Setup Guide to finish the game (reports, RTI dashboard, Data Agent, OrgApp).
 
 ---
 
@@ -126,8 +126,8 @@ See [EXAMPLE-THEMES.md](EXAMPLE-THEMES.md) for full details with story hooks and
 
 ## What Copilot Generates
 
-After you run the prompt, Copilot creates all the Fabric items and generates three documents:
+After you run the prompt, Copilot creates the data and modeling layer of the game (Warehouse, Eventhouse + KQL Database, Lakehouse, Semantic Model, and the Module 4 Notebook) using the [Fabric authoring skills](https://github.com/microsoft/skills-for-fabric). It then generates documentation **split across multiple files** so the team can work in parallel:
 
-1. **Setup Guide** — Detailed instructions for building reports, dashboards, configuring the Data Agent, and setting up the OrgApp
-2. **Play Guide** — Spoiler-free instructions for players (story, hints, code formats)
-3. **Answer Key** — All 4 codes with exact locations and verification queries (game admin only)
+- **`setup-guide/`** — one file per workstream so different team members can pick up reports, dashboard, Data Agent, and OrgApp independently. Includes a `README.md` index with role assignments and the dependency order.
+- **`PLAY-GUIDE.md`** — Spoiler-free instructions for players (story, hints, code formats)
+- **`ANSWER-KEY.md`** — All 4 codes with exact locations and verification queries (game admin only)
